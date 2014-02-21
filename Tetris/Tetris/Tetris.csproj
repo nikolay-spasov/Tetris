@@ -57,7 +57,7 @@
     <Reference Include="System.EnterpriseServices" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Scripts\Piece.js" />
+    <Content Include="Content\tetris.css" />
     <Content Include="Scripts\Pieces.js" />
     <Content Include="Scripts\Tetris.js" />
     <Content Include="Scripts\TetrisBackup.js" />
