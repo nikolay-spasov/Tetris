@@ -3,9 +3,10 @@
 
     var canvas,
         ctx,
-        FRAME_RATE = 1000 / 20,
+        FRAME_RATE = 1000 / 30,
         ROWS = 22,
         COLS = 10,
+        options = { synchronizedInput: true },
         size = 20,
         score = 0,
         field,
@@ -82,11 +83,6 @@
                 ctx.strokeRect(col * size, row * size, size, size);
             }
         }
-        ctx.strokeStyle = '#fff';
-        ctx.beginPath();
-        ctx.moveTo(200, 0);
-        ctx.lineTo(200, canvas.height);
-        ctx.stroke();
 
         // Draw currentPiece
         for (var i = 0; i < currentPiece.blocks.length; i++) {
@@ -102,7 +98,12 @@
             ctx.strokeRect(col * size, row * size, size, size);
         }
 
-        // Draw status
+        ctx.strokeStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(200, 0);
+        ctx.lineTo(200, canvas.height);
+        ctx.stroke();
+
         ctx.font = '12px Arial';
         ctx.fillStyle = '#fff';
         ctx.fillText('Score: ', 220, 20);
@@ -138,14 +139,19 @@
 
     function update() {
         if (currentGameState === GameState.Playing) {
-            if (keyboardState.Left) {
-                movePiece('left');
-            } else if (keyboardState.Right) {
-                movePiece('right');
-            } else if (keyboardState.Down) {
-                movePiece('down');
+            if (options.synchronizedInput) {
+                if (keyboardState.Left) {
+                    moveLeft();
+                    //if (currentPiecePosition.col + currentPiece.offset > 0 && canMoveLeft()) currentPiecePosition.col--;
+                } else if (keyboardState.Right) {
+                    //if ((currentPiecePosition.col < COLS - currentPiece.width) && canMoveRight()) {
+                    //    currentPiecePosition.col++;
+                    //}
+                    moveRight();
+                } else if (keyboardState.Down && canMoveDown()) {
+                    currentPiecePosition.row++;
+                }
             }
-            
             if (currentFrame % 10 === 0) {
                 var row,
                     col;
@@ -173,8 +179,9 @@
 
                 currentPiecePosition.row++;
             }
+
             currentFrame++;
-            if (currentFrame >= 10) currentFrame = 0;
+            if (currentFrame >= 30) currentFrame = 0;
         }
     }
 
@@ -183,16 +190,19 @@
         return index;
     }
 
-    function getRandomPiece() {        
-        var keys = ['horizontalLine', 'cube', 'zright', 'uright', 'tup', 'L', 'reversedL'];
-        var selectedKey = keys[Math.floor(Math.random() * keys.length)];
-        var rotateTimes = Math.floor(Math.random() * 4) - 1;
-        var piece = pieces[selectedKey];
-        for (var i = 0; i < rotateTimes; i++) {
-            piece = pieces[piece.rotateNext];
+    function getRandomPiece() {
+        var randomIndex = Math.floor(Math.random() * 19),
+            currentIndex = 0,
+            selectedKey;
+        for (var key in pieces) {
+            if (currentIndex === randomIndex) {
+                selectedKey = key;
+                break;
+            }
+            currentIndex++;
         }
 
-        return piece;
+        return pieces[selectedKey];
     }
 
     function landPiece() {
@@ -236,64 +246,39 @@
         return true;
     }
 
-    function movePiece(direction) {
-        var row = 0
-          , col = 0;
-        switch (direction) {
-            case 'left': col = -1; break;
-            case 'right': col = 1; break;
-            case 'down': row = 1; break;
-            default: return;
-        }
-
-        var r, c, i;
-        for (i = 0; i < currentPiece.blocks.length; i++) {
-            r = currentPiecePosition.row + row + currentPiece.blocks[i].row;
-            c = currentPiecePosition.col + col + currentPiece.blocks[i].col;
-            if (r < 0 || r >= ROWS || c < 0 || c >= COLS || field[r][c] !== 0) {
-                return;
-            }
-        }
-
-        currentPiecePosition.row += row;
-        currentPiecePosition.col += col;
-    }
-
-    function canRotate() {
-        var row,
-            col,
-            rotated = pieces[currentPiece.rotateNext];
-
-        for (var i = 0; i < rotated.blocks.length; i++) {
-            row = currentPiecePosition.row + rotated.blocks[i].row;
-            col = currentPiecePosition.col + rotated.blocks[i].col + rotated.offset;
-            if (col >= COLS || field[row][col] !== 0) return false;
-        }
-
-        return true;
-    }
-
     window.onload = function () {
         init();
 
         canvas.addEventListener('keydown', function (keyInfo) {
             var keyCode = keyInfo.keyCode;
+            //console.log("keyCode " + keyCode);
 
             if (currentGameState === GameState.Playing) {
                 if (keyCode === 38) {
                     var rotated = pieces[currentPiece.rotateNext];
                     if (currentPiecePosition.col > COLS - rotated.width) {
-                        currentPiecePosition.col = COLS - rotated.width + rotated.offset;
+                        currentPiecePosition.col = COLS - rotated.width;
                         currentPiece = rotated;
                     } else if (canRotate()) {
                         currentPiece = rotated;
                     }
-                } else if (keyCode === 80) {
-                    currentGameState = GameState.Paused;
+                } else if (keyCode === 80) currentGameState = GameState.Paused;
+
+                if (!options.synchronizedInput) {
+                    switch (keyCode) {
+                        case 37: if (currentPiecePosition.col > 0 && canMoveLeft()) currentPiecePosition.col--; break;
+                        case 39:
+                            if ((currentPiecePosition.col < COLS - currentPiece.width) && canMoveRight()) {
+                                currentPiecePosition.col++;
+                            }
+                            break;
+                        case 40: if (canMoveDown()) currentPiecePosition.row++; break;
+                    }
                 } else {
                     switch (keyCode) {
                         case 37: keyboardState.Left = true; break;
                         case 39: keyboardState.Right = true; break;
+                            //case 38: keyboardState.Up = true; break;
                         case 40: keyboardState.Down = true; break;
                     }
                 }
@@ -308,11 +293,13 @@
         }, false);
 
         canvas.addEventListener('keyup', function (keyInfo) {
-            var keyCode = keyInfo.keyCode;
-            switch (keyCode) {
-                case 37: keyboardState.Left = false; break;
-                case 39: keyboardState.Right = false; break;
-                case 40: keyboardState.Down = false; break;
+            if (options.synchronizedInput) {
+                var keyCode = keyInfo.keyCode;
+                switch (keyCode) {
+                    case 37: keyboardState.Left = false; break;
+                    case 39: keyboardState.Right = false; break;
+                    case 40: keyboardState.Down = false; break;
+                }
             }
         }, false);
 
@@ -322,5 +309,122 @@
             update();
             draw();
         }, FRAME_RATE);
+
+        //var mainLoop = function () {
+        //    update();
+        //    draw();
+        //};
+
+        //var animFrame = window.requestAnimationFrame ||
+        //    window.webkitRequestAnimationFrame ||
+        //    window.mozRequestAnimationFrame ||
+        //    window.oRequestAnimationFrame ||
+        //    window.msRequestAnimationFrame ||
+        //    null;
+
+        //var recursiveAnim = function () {
+        //    mainLoop();
+        //    animFrame(recursiveAnim);
+        //}
+
+        //animFrame(recursiveAnim);
     };
-}());
+
+    function moveLeft() {
+        var row,
+            col;
+        for (var i = 0; i < currentPiece.blocks.length; i++) {
+            row = currentPiecePosition.row + currentPiece.blocks[i].row;
+            col = currentPiecePosition.col + currentPiece.blocks[i].col - 1;
+            //console.log('row: ' + row + ' col: ' + col);
+            if (col < 0) return;
+            if (field[row][col] !== 0) return;
+        }
+
+        currentPiecePosition.col--;
+    }
+
+    function moveRight() {
+        var row,
+            col;
+        for (var i = 0; i < currentPiece.blocks.length; i++) {
+            row = currentPiecePosition.row + currentPiece.blocks[i].row;
+            col = currentPiecePosition.col + currentPiece.blocks[i].col + 1;
+            if (col >= COLS || field[row][col] !== 0) return;
+        }
+
+        currentPiecePosition.col++;
+    }
+
+    function rotate() {
+        var row,
+            col,
+            rotated = pieces[currentPiece.rotateNext];
+
+        for (var i = 0; i < rotated.blocks.length; i++) {
+            row = currentPiecePosition.row + rotated.blocks[i].row;
+            col = currentPiecePosition.col + rotated.blocks[i].col - rotated.offset;
+            if (row >= ROWS || col < 0 || col + width >= COLS || field[row][col] !== 0) return;
+        }
+
+        currentPiece = rotated;
+        currentPiecePosition.col -= rotated.offset;
+
+        return true;
+    }
+
+    function canMoveRight() {
+        var row,
+            col;
+        for (var i = 0; i < currentPiece.blocks.length; i++) {
+            row = currentPiecePosition.row + currentPiece.blocks[i].row;
+            col = currentPiecePosition.col + currentPiece.blocks[i].col + 1;
+            if (field[row][col] !== 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function canMoveDown() {
+        var row,
+            col;
+        for (var i = 0; i < currentPiece.blocks.length; i++) {
+            row = currentPiecePosition.row + 1 + currentPiece.blocks[i].row;
+            col = currentPiecePosition.col + currentPiece.blocks[i].col;
+            if (row + 1 >= ROWS || field[row][col] !== 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function canMoveLeft() {
+        var row,
+            col;
+        for (var i = 0; i < currentPiece.blocks.length; i++) {
+            row = currentPiecePosition.row + currentPiece.blocks[i].row;
+            col = currentPiecePosition.col + currentPiece.blocks[i].col - 1 + currentPiece.offset;
+            console.log('row: ' + row + ' col: ' + col);
+            if (field[row][col] !== 0) return false;
+        }
+        return true;
+    }
+
+    function canRotate() {
+        var row,
+            col,
+            rotated = pieces[currentPiece.rotateNext];
+
+        for (var i = 0; i < rotated.blocks.length; i++) {
+            row = currentPiecePosition.row + rotated.blocks[i].row;
+            col = currentPiecePosition.col + rotated.blocks[i].col + rotated.offset;
+            if (field[row][col] !== 0) return false;
+        }
+
+        //currentPiecePosition.col += rotated.offset;
+        return true;
+    }
+})();

@@ -1,10 +1,38 @@
 ﻿<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <title></title>
+    <title>Tetris</title>
+    <link href="Content/tetris.css" rel="stylesheet" />
 </head>
 <body>
+    <div id="wrapper">
+    <h2>Tetris</h2>
     <canvas id="game-canvas" tabindex="0" width="350" height="440"></canvas>
+    <table id="controls">
+        <tbody>
+            <tr>
+                <td>Left:</td>
+                <td>Left arrow</td>
+            </tr>
+            <tr>
+                <td>Right:</td>
+                <td>Right arrow</td>
+            </tr>
+            <tr>
+                <td>Down:</td>
+                <td>Down arrow</td>
+            </tr>
+            <tr>
+                <td>Rotate:</td>
+                <td>Up arrow</td>
+            </tr>
+            <tr>
+                <td>Pause:</td>
+                <td>P</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
     <script src="Scripts/Pieces.js"></script>
     <script src="Scripts/Tetris.js"></script>
 </body>

@@ -1,0 +1,11 @@
+﻿#wrapper {
+    margin-left: 50px;
+}
+
+table {
+    font-family: sans-serif;
+}
+
+tr td:last-of-type {
+    color: red;
+}
